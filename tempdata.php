@@ -1,5 +1,6 @@
 <?php
 
+# rrd default options
 $options = array(
  "--step", "300",            // Use a step-size of 5 minutes
  "--start", "-12 months",     // this rrd started 6 months ago
@@ -10,15 +11,7 @@ $options = array(
  "RRA:AVERAGE:0.5:228:365",
  );
 
-$ret = rrd_create("temps.rrd", $options);
-if (! $ret) {
- echo "<b>Creation error: </b>".rrd_error()."\n";
-}
-
-?>
-
-<?php
-$db = new SQLite3('tempsensor.db', SQLITE3_OPEN_READONLY);
+$db = new SQLite3('/home/pi/1w-probe/tempsensor.db', SQLITE3_OPEN_READONLY);
 
 $now_time_t = time();
 # CREATE TABLE temps (probe text not null, time_t integer, temp real);
@@ -26,32 +19,55 @@ $now_time_t = time();
 # twelve hours ago
 #$twelve_ago = $now_time_t - (60*60*12);
 $twelve_ago=0;
+#
 
-$sql = "SELECT * FROM temps WHERE time_t > $twelve_ago AND probe='/sys/bus/w1/devices/28-000006153bb4'";
-#print $sql;
+# fetch a unique list of the probes
+$probe_sql = "select distinct probe from temps";
+# run the query
+$results = $db->query($probe_sql);
+
+$probelist = array();
+# push these unique probes into $probelist array
+while ($row = $results->fetchArray()) {
+	# push probe path into array $probelist
+	array_push($probelist, $row[0]);
+}
+
+# iterate through probes creating graphs
+foreach ($probelist as &$probe_path) {
+
+	$ret = rrd_create("temps.rrd", $options);
+	if (! $ret) {
+		echo "<b>Creation error: </b>".rrd_error()."\n";
+	}
+
+	$sql = "SELECT * FROM temps WHERE time_t > $twelve_ago AND probe='$probe_path'";
+#	print $sql;
 #print "\n";
 $results = $db->query($sql);
 
 #print $twelve_ago;
 #print "\n";
 
-while ($row = $results->fetchArray()) {
-	$tempf = ($row[2]* 9)/5 +32;
-#	print "$row[0] $row[1] $row[2] $tempf\n";
-##	print "$row[1]:$row[2]:$tempf\n";
-    $ret = rrd_update("temps.rrd", array("$row[1]:$row[2]:$tempf"));
-#    var_dump($row)o
+	while ($row = $results->fetchArray()) {
+		$tempf = ($row[2]* 9)/5 +32;
+#		print "$row[0] $row[1] $row[2] $tempf\n";
+##		print "$row[1]:$row[2]:$tempf\n";
+		$ret = rrd_update("temps.rrd", array("$row[1]:$row[2]:$tempf"));
+#		var_dump($row)
+	}
+
+	$prefix = strrpos($probe_path, "/");
+	$probe_prefix = substr($probe_path, $prefix+1);
+#	print $probe_prefix . "\n";
+	create_graph($probe_prefix."-temps-hour.gif", "-1h", "Hourly temp");
+	create_graph($probe_prefix."-temps-day.gif", "-1d", "Daily temp");
+	create_graph($probe_prefix."-temps-week.gif", "-1w", "Weekly temp");
+	create_graph($probe_prefix."-temps-month.gif", "-1m", "Monthly temp");
+	create_graph($probe_prefix."-temps-year.gif", "-1y", "Yearly temp");
 }
-?>
 
-<?php
-
-create_graph("temps-hour.gif", "-1h", "Hourly temp");
-create_graph("temps-day.gif", "-1d", "Daily temp");
-create_graph("temps-week.gif", "-1w", "Weekly temp");
-create_graph("temps-month.gif", "-1m", "Monthly temp");
-create_graph("temps-year.gif", "-1y", "Yearly temp");
-
+# function to create a graphic 
 function create_graph($output, $start, $title) {
   $options = array(
     "--slope-mode",

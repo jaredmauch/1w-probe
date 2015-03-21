@@ -10,6 +10,9 @@ dbpath = 'tempsensor.db'
 
 conn = sqlite3.connect(dbpath)
 
+# wait up to 10 seconds for database connection
+conn.execute("PRAGMA busy_timeout = 10000")
+
 # create the dataset for storing the temps
 sql = 'create table if not exists temps (probe text not null, time_t integer, temp real)'
 c = conn.cursor()
@@ -18,6 +21,7 @@ conn.commit()
 
 # create a list of the sensors
 sql = 'create table if not exists sensors (probe text not null, description text not null)'
+
 c = conn.cursor()
 c.execute(sql)
 conn.commit()
@@ -74,5 +78,5 @@ while 1:
 		conn.commit()
 
 	# end sensor for
-	time.sleep(1)
+	time.sleep(5)
 #/sys/bus/w1/devices/28-0000061531b5/w1_slave
