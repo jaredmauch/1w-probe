@@ -10,14 +10,17 @@ dbpath = 'tempsensor.db'
 
 conn = sqlite3.connect(dbpath)
 
-# wait up to 10 seconds for database connection
-conn.execute("PRAGMA busy_timeout = 10000")
+# wait up to 30 seconds for database connection
+conn.execute("PRAGMA busy_timeout = 30000")   # 30 s
 
 # create the dataset for storing the temps
 sql = 'create table if not exists temps (probe text not null, time_t integer, temp real)'
 c = conn.cursor()
 c.execute(sql)
-conn.commit()
+try:
+	conn.commit()
+except sqlite3.Error:
+	print "Unable to create table";
 
 # create a list of the sensors
 sql = 'create table if not exists sensors (probe text not null, description text not null)'
@@ -75,7 +78,10 @@ while 1:
 		temperaturef = (temperaturec * 9)/5 +32
 		print "%d %6.2f C %6.2f F Valid/CrcOK=%s %s"% (time.mktime(tstamp.timetuple()), temperaturec, temperaturef, crcok, sensor)
 		c.execute("insert into temps values (?,?,?)", (sensor, time.mktime(tstamp.timetuple()), temperaturec))
-		conn.commit()
+		try:
+			conn.commit()
+		except sqlite3.Error:
+			print "Error trying to save temp";
 
 	# end sensor for
 	time.sleep(5)
