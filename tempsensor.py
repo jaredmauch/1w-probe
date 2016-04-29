@@ -5,6 +5,11 @@ import datetime
 import os
 import sqlite3
 
+#third party libs
+# apt-get install python-daemon
+from daemon import runner
+# http://www.gavinj.net/2012/06/building-python-daemon-process.html
+
 # path to database file
 dbpath = 'tempsensor.db'
 
@@ -29,24 +34,25 @@ c = conn.cursor()
 c.execute(sql)
 conn.commit()
 
+# while forever, talk to the sensors
+while 1:
+
 # zero out the list of sensors
-sensors = []
+	sensors = []
 
 # iterate through the 1w bus directories
 # collecting the sensors
 
-for dirname, dirnames, filenames in os.walk('/sys/bus/w1/devices/'):
-    # print path to all subdirectories first.
-    for subdirname in dirnames:
-	temppath = os.path.join(dirname, subdirname)
-	if "28-" in temppath:
-		sensors.append(temppath) # push
-#		print temppath
+	for dirname, dirnames, filenames in os.walk('/sys/bus/w1/devices/'):
+	    # print path to all subdirectories first.
+	    for subdirname in dirnames:
+		temppath = os.path.join(dirname, subdirname)
+		if "28-" in temppath:
+			sensors.append(temppath) # push
+#			print temppath
 
 #print "should probe these sensors"
 
-# while forever, talk to the sensors
-while 1:
 	for sensor in sensors:
 #		print sensor
 		# build the full sensor path

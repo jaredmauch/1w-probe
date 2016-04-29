@@ -1,6 +1,6 @@
 <?php
 
-chdir('/var/www');
+chdir('/var/www/html');
 
 # rrd default options
 $options = array(
