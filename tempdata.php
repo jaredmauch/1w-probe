@@ -4,13 +4,13 @@ chdir('/var/www/html');
 
 # rrd default options
 $options = array(
-	"--step", "300",            // Use a step-size of 5 minutes
-	"--start", "-12 months",     // this rrd started 6 months ago
-	"DS:temp_c:GAUGE:900:0:U",
-	"DS:temp_f:GAUGE:900:0:U",
-	"RRA:AVERAGE:0.5:1:288",
-	"RRA:AVERAGE:0.5:12:168",
-	"RRA:AVERAGE:0.5:228:365",
+	"--step", "60",            // Use a step-size of 60 seconds
+	"--start", "-1y",     // this rrd started 6 months ago
+	"DS:temp_c:GAUGE:300:0:U",
+	"DS:temp_f:GAUGE:300:0:U",
+	"RRA:AVERAGE:0.9:1:288",
+	"RRA:AVERAGE:0.9:12:168",
+	"RRA:AVERAGE:0.9:228:365",
 	);
 
 $db = new SQLite3('/home/pi/1w-probe/tempsensor.db', SQLITE3_OPEN_READONLY);
@@ -44,9 +44,9 @@ foreach ($probelist as &$probe_path) {
 		echo "<b>Creation error: </b>".rrd_error()."\n";
 	}
 
-	$sql = "SELECT * FROM temps WHERE time_t > $twelve_ago AND probe='$probe_path'";
-#	print $sql;
-#print "\n";
+	$sql = "SELECT * FROM temps WHERE probe='$probe_path'";
+	#print $sql;
+	#print "\n";
 $results = $db->query($sql);
 
 #print $twelve_ago;
@@ -55,7 +55,7 @@ $results = $db->query($sql);
 	while ($row = $results->fetchArray()) {
 		$tempf = ($row[2]* 9)/5 +32;
 #		print "$row[0] $row[1] $row[2] $tempf\n";
-##		print "$row[1]:$row[2]:$tempf\n";
+#		print "$row[1]:$row[2]:$tempf\n";
 		$ret = rrd_update("temps.rrd", array("$row[1]:$row[2]:$tempf"));
 #		var_dump($row)
 	}
