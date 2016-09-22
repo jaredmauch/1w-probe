@@ -82,7 +82,10 @@ while 1:
 		temperaturec = temperaturec / 1000
 		# convert to F
 		temperaturef = (temperaturec * 9)/5 +32
-		print "%d %6.2f C %6.2f F Valid/CrcOK=%s %s"% (time.mktime(tstamp.timetuple()), temperaturec, temperaturef, crcok, sensor)
+                oid = sensor.replace('/', '.');
+                oid = oid[1:];
+
+		print "%s %d %6.2f C %6.2f F Valid/CrcOK=%s"% (oid, time.mktime(tstamp.timetuple()), temperaturec, temperaturef, crcok)
 		c.execute("insert into temps values (?,?,?)", (sensor, time.mktime(tstamp.timetuple()), temperaturec))
 		try:
 			conn.commit()

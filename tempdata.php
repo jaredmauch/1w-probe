@@ -8,9 +8,9 @@ $options = array(
 	"--start", "-1y",     // this rrd started 6 months ago
 	"DS:temp_c:GAUGE:300:0:U",
 	"DS:temp_f:GAUGE:300:0:U",
-	"RRA:AVERAGE:0.9:1:288",
-	"RRA:AVERAGE:0.9:12:168",
-	"RRA:AVERAGE:0.9:228:365",
+	"RRA:AVERAGE:0.5:1:288",
+	"RRA:AVERAGE:0.5:12:168",
+	"RRA:AVERAGE:0.5:228:365",
 	);
 
 $db = new SQLite3('/home/pi/1w-probe/tempsensor.db', SQLITE3_OPEN_READONLY);
