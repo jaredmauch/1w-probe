@@ -9,13 +9,11 @@ import socket
 # send data to remote server
 # store backlog data in the sqlite3 storage
 
-#third party libs
-# apt-get install python-daemon
-from daemon import runner
-# http://www.gavinj.net/2012/06/building-python-daemon-process.html
-
 # path to database file
 dbpath = 'tempsensor.db'
+
+# server hostname
+server_host = 'graphite.example.com'
 
 conn = sqlite3.connect(dbpath)
 
@@ -91,7 +89,7 @@ while 1:
 
                 try:
                   sock = socket.socket()
-                  sock.connect( ("204.42.254.22", 2003) )
+                  sock.connect( (server_host, 2003) )
                   sock.send("%s %6.2f %d \n" % (oid, temperaturec, time.time()))
                   sock.close()
                 except:
