@@ -4,6 +4,10 @@ import time
 import datetime
 import os
 import sqlite3
+import socket
+
+# send data to remote server
+# store backlog data in the sqlite3 storage
 
 #third party libs
 # apt-get install python-daemon
@@ -85,12 +89,21 @@ while 1:
                 oid = sensor.replace('/', '.');
                 oid = oid[1:];
 
-		print "%s %d %6.2f C %6.2f F Valid/CrcOK=%s"% (oid, time.mktime(tstamp.timetuple()), temperaturec, temperaturef, crcok)
-		c.execute("insert into temps values (?,?,?)", (sensor, time.mktime(tstamp.timetuple()), temperaturec))
-		try:
-			conn.commit()
-		except sqlite3.Error:
-			print "Error trying to save temp";
+                try:
+                  sock = socket.socket()
+                  sock.connect( ("204.42.254.22", 2003) )
+                  sock.send("%s %6.2f %d \n" % (oid, temperaturec, time.time()))
+                  sock.close()
+                except:
+
+                  c.execute("insert into temps values (?,?,?)", (sensor, time.mktime(tstamp.timetuple()), temperaturec))
+                try:
+                  conn.commit()
+                except sqlite3.Error:
+                  print "Error trying to save temp";
+
+                print "%s %d %6.2f C %6.2f F Valid/CrcOK=%s"% (oid, time.mktime(tstamp.timetuple()), temperaturec, temperaturef, crcok)
+
 
 	# end sensor for
 	time.sleep(5)
