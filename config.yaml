@@ -1,0 +1,4 @@
+# streaming server collector
+carbon_server: carbon.example.com
+carbon_port: 2003
+

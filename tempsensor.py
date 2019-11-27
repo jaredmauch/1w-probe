@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import multiprocessing as mp
 import time
 import datetime
 import os
@@ -13,7 +14,8 @@ import socket
 dbpath = 'tempsensor.db'
 
 # server hostname
-server_host = 'graphite.example.com'
+carbon_server = config_content['carbon_server']
+carbon_port = config_content['carbon_port']
 
 conn = sqlite3.connect(dbpath)
 
@@ -89,8 +91,10 @@ while 1:
 
                 try:
                   sock = socket.socket()
-                  sock.connect( (server_host, 2003) )
-                  sock.send("%s %6.2f %d \n" % (oid, temperaturec, time.time()))
+                  sock.connect( (carbon_server, carbon_port) )
+#                  sock.send("%s %6.2f %d \n" % (oid, temperaturec, time.time()))
+                  sock.send("%s %6.2f %d \n" % (oid, temperaturef, time.time()))
+
                   sock.close()
                 except:
 
