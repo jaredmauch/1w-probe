@@ -10,8 +10,11 @@ import socket
 # send data to remote server
 # store backlog data in the sqlite3 storage
 
+with open('config.yaml', 'r') as f:
+    config_content = yaml.load(f)
+
 # path to database file
-dbpath = 'tempsensor.db'
+dbpath = config_content['sqlite_file']
 
 # server hostname
 carbon_server = config_content['carbon_server']
