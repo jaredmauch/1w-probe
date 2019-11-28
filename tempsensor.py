@@ -67,8 +67,11 @@ while 1:
         sensor_path = sensor + "/w1_slave"
     
         # open the sensor
-#        tempfile = open("/sys/bus/w1/devices/28-0000061531b5/w1_slave")
-        tempfile = open(sensor_path)
+        try:
+            tempfile = open(sensor_path)
+        except Exception as e:
+            print(sensor_path, e)
+            continue
         # read data into thetext
         thetext = tempfile.read()
 ## example data
@@ -94,23 +97,24 @@ while 1:
         oid = oid[1:]
 
         blurb='Unknown'
-        try:
-              sock = socket.socket()
-              sock.connect( (carbon_server, carbon_port) )
-#              sock.send("%s %6.2f %d \n" % (oid, temperaturec, time.time()))
-              server_data = "%s %6.2f %d \n" % (oid, temperaturef, time.time())
-              sock.send(server_data.encode())
+        if crcok == "YES":
+            try:
+                  sock = socket.socket()
+                  sock.connect( (carbon_server, carbon_port) )
+#                  sock.send("%s %6.2f %d \n" % (oid, temperaturec, time.time()))
+                  server_data = "%s %6.2f %d \n" % (oid, temperaturef, time.time())
+                  sock.send(server_data.encode())
 
-              sock.close()
-              blurb="Network"
-        except Exception as e:
-              print(e)
-              c.execute("insert into temps values (?,?,?)", (sensor, time.mktime(tstamp.timetuple()), temperaturec))
-              blurb="Sqlite"
-        try:
-              conn.commit()
-        except sqlite3.Error as e:
-              print("Error trying to save temp", e)
+                  sock.close()
+                  blurb="Network"
+            except Exception as e:
+                  print(e)
+                  c.execute("insert into temps values (?,?,?)", (sensor, time.mktime(tstamp.timetuple()), temperaturec))
+                  blurb="Sqlite"
+            try:
+                  conn.commit()
+            except sqlite3.Error as e:
+                  print("Error trying to save temp", e)
 
         print("%s %d %6.2f C %6.2f F Valid/CrcOK=%s %s"% (oid, time.mktime(tstamp.timetuple()), temperaturec, temperaturef, crcok, blurb))
 
