@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
 
         if count == adc_bits:
-            print("ch0=%04d, ch1=%04d, ch2=%04d, ch3=%04d" % (a0/adc_bits, a1/adc_bits, a2/adc_bits, a3/adc_bits))
+#            print("ch0=%04d, ch1=%04d, ch2=%04d, ch3=%04d" % (a0/adc_bits, a1/adc_bits, a2/adc_bits, a3/adc_bits))
             vbits0 = ((a0/adc_bits) / bits)
             vbits1 = ((a1/adc_bits) / bits)
             vbits2 = ((a2/adc_bits) / bits)
