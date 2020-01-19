@@ -6,7 +6,7 @@
 #               $ sudo raspi-config -> interfacing -> spi
 #
 #       how to setup spidev
-#               $ sudo apt-get install python3-spidev
+#               $ sudo apt-get install python3-spidev python3-yaml
 #
 import socket
 import time
@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     divider = resistor_1 / (resistor_1 + resistor_2)
 
-    hostname = uuid.getnode()
+    hostname = uuid.getnode() # this returns the hwaddr of eth0/wlan0
 
     with open('config.yaml', 'r') as f:
         config_content = yaml.load(f)
