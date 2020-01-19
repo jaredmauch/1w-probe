@@ -1,6 +1,6 @@
 #!/bin/bash
 while true
 do
-	python tempsensor.py
+	python3 tempsensor.py
 done
 
