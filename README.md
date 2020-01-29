@@ -14,4 +14,4 @@ dtoverlay=w1-gpio-pullup,gpiopin=4,extpullup=5,pullup=on
 
 the mcp3204.py code reads from MCP3204 on the SPI.  The resistor values and VREF are all coded to make it easy to sense and send data to your server as well.
 
-I uploaded the eagle schematic and gerber zip for the latest board that works so you can have them made at a pace like pcb.ng or jlcpcb.
+I uploaded the eagle schematic and gerber zip for the latest board that works so you can have them made at a place like pcb.ng, jlcpcb or macrofab.
