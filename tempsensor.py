@@ -12,7 +12,7 @@ import yaml
 # store backlog data in the sqlite3 storage
 
 with open('config.yaml', 'r') as f:
-    config_content = yaml.load(f)
+    config_content = yaml.load(f, Loader=yaml.BaseLoader)
 
 # path to database file
 dbpath = config_content['sqlite_file']
