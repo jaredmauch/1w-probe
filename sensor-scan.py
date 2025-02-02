@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # /boot/config.txt needs this:
 # dtoverlay=w1-gpio-pullup,gpiopin=4,extpullup=5,pullup=on

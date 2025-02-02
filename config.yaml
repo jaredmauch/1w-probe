@@ -1,5 +1,0 @@
-# streaming server collector
-carbon_server: localhost
-carbon_port: 2003
-sqlite_file: tempsensor.db
-sleep_duration: 6

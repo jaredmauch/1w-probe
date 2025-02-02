@@ -5,8 +5,8 @@ import time
 import datetime
 import os
 import sqlite3
-import socket
 import yaml
+import influxdb
 
 # send data to remote server
 # store backlog data in the sqlite3 storage
@@ -18,8 +18,14 @@ with open('config.yaml', 'r') as f:
 dbpath = config_content['sqlite_file']
 
 # server hostname
-carbon_server = config_content['carbon_server']
-carbon_port = config_content['carbon_port']
+#carbon_server = config_content['carbon_server']
+#carbon_port = int(config_content['carbon_port'])
+influx_host = config_content['influx_host']
+influx_port = int(config_content['influx_port'])
+influx_username = config_content['influx_username']
+influx_db = config_content['influx_db']
+influx_db_pw = config_content['influx_db_pw']
+influx_client = influxdb.InfluxDBClient(host=influx_host, port=influx_port, username=influx_username, database=influx_db, password=influx_db_pw, ssl=False, verify_ssl=False)
 
 conn = sqlite3.connect(dbpath)
 
@@ -99,13 +105,17 @@ while 1:
         blurb='Unknown'
         if crcok == "YES":
             try:
-                  sock = socket.socket()
-                  sock.connect( (carbon_server, carbon_port) )
+#                  print("attempting to connect to %s:%d" % (carbon_server, carbon_port))
+#                  sock = socket.socket()
+#                  sock.connect( (carbon_server, carbon_port) )
 #                  sock.send("%s %6.2f %d \n" % (oid, temperaturec, time.time()))
-                  server_data = "%s %6.2f %d \n" % (oid, temperaturef, time.time())
-                  sock.send(server_data.encode())
+#                  print("forming server_data")
+#                  server_data = "%s %6.2f %d \n" % (oid, temperaturef, time.time())
+                  server_data = "%s value=%1.2f %d\n" % (oid, temperaturef, time.time() * 1000000000)
+                  influx_client.write_points(server_data, protocol='line')
 
-                  sock.close()
+#                  print("data sent ok")
+
                   blurb="Network"
             except Exception as e:
                   print(e)
@@ -118,7 +128,6 @@ while 1:
 
         print("%s %d %6.2f C %6.2f F Valid/CrcOK=%s %s"% (oid, time.mktime(tstamp.timetuple()), temperaturec, temperaturef, crcok, blurb))
 
-
         # end sensor for
-        time.sleep(5)
+        time.sleep(int(config_content['sleep_duration']))
 #/sys/bus/w1/devices/28-0000061531b5/w1_slave
