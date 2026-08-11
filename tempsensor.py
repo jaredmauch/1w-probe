@@ -11,20 +11,24 @@ import influxdb
 # send data to remote server
 # store backlog data in the sqlite3 storage
 
-with open('config.yaml', 'r') as f:
-    config_content = yaml.load(f, Loader=yaml.BaseLoader)
+try:
+    with open('config.yaml', 'r') as f:
+        config_content = yaml.safe_load(f) or {}
+except (OSError, yaml.YAMLError):
+    config_content = {}
 
 # path to database file
-dbpath = config_content['sqlite_file']
+dbpath = config_content.get('sqlite_file', 'tempsensor.db')
 
 # server hostname
-#carbon_server = config_content['carbon_server']
-#carbon_port = int(config_content['carbon_port'])
-influx_host = config_content['influx_host']
-influx_port = int(config_content['influx_port'])
-influx_username = config_content['influx_username']
-influx_db = config_content['influx_db']
-influx_db_pw = config_content['influx_db_pw']
+#carbon_server = config_content.get('carbon_server', 'localhost')
+#carbon_port = int(config_content.get('carbon_port', 2003))
+influx_host = config_content.get('influx_host', 'localhost')
+influx_port = int(config_content.get('influx_port', 8086))
+influx_username = config_content.get('influx_username', 'user')
+influx_db = config_content.get('influx_db', 'databasename')
+influx_db_pw = config_content.get('influx_db_pw', 'databasepw')
+sleep_duration = int(config_content.get('sleep_duration', 6))
 influx_client = influxdb.InfluxDBClient(host=influx_host, port=influx_port, username=influx_username, database=influx_db, password=influx_db_pw, ssl=False, verify_ssl=False)
 
 conn = sqlite3.connect(dbpath)
@@ -129,5 +133,5 @@ while 1:
         print("%s %d %6.2f C %6.2f F Valid/CrcOK=%s %s"% (oid, time.mktime(tstamp.timetuple()), temperaturec, temperaturef, crcok, blurb))
 
         # end sensor for
-        time.sleep(int(config_content['sleep_duration']))
+        time.sleep(sleep_duration)
 #/sys/bus/w1/devices/28-0000061531b5/w1_slave

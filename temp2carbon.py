@@ -11,18 +11,21 @@ cur = conn.cursor()
 cur.execute("SELECT probe, temp, time_t from temps");
 row = cur.fetchone()
 
-with open('config.yaml', 'r') as f:
-    config_content = yaml.load(f, Loader=yaml.BaseLoader)
+try:
+    with open('config.yaml', 'r') as f:
+        config_content = yaml.safe_load(f) or {}
+except (OSError, yaml.YAMLError):
+    config_content = {}
 
 # path to database file
-dbpath = config_content['sqlite_file']
+dbpath = config_content.get('sqlite_file', 'tempsensor.db')
 
 # server hostname
-influx_host = config_content['influx_host']
-influx_port = int(config_content['influx_port'])
-influx_username = config_content['influx_username']
-influx_db = config_content['influx_db']
-influx_db_pw = config_content['influx_db_pw']
+influx_host = config_content.get('influx_host', 'localhost')
+influx_port = int(config_content.get('influx_port', 8086))
+influx_username = config_content.get('influx_username', 'user')
+influx_db = config_content.get('influx_db', 'databasename')
+influx_db_pw = config_content.get('influx_db_pw', 'databasepw')
 
 influx_client = influxdb.InfluxDBClient(host=influx_host, port=influx_port, username=influx_username, database=influx_db, password=influx_db_pw, ssl=False, verify_ssl=False)
 

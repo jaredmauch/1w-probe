@@ -56,16 +56,16 @@ if __name__ == '__main__':
 
     hostname = uuid.getnode() # this returns the hwaddr of eth0/wlan0
 
-    with open('config.yaml', 'r') as f:
-        config_content = yaml.load(f)
+    try:
+        with open('config.yaml', 'r') as f:
+            config_content = yaml.safe_load(f) or {}
+    except (OSError, yaml.YAMLError):
+        config_content = {}
 
     # server hostname
-    carbon_server = config_content['carbon_server']
-    carbon_port = config_content['carbon_port']
-    try:
-        sleep_duration = config_content['sleep_duration']
-    except KeyError:
-        sleep_duration = 1
+    carbon_server = config_content.get('carbon_server', 'localhost')
+    carbon_port = int(config_content.get('carbon_port', 2003))
+    sleep_duration = float(config_content.get('sleep_duration', 1))
 
     vmult = vref/bits
 
