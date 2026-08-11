@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-import multiprocessing as mp
 import time
-import datetime
 import os
 import sqlite3
 import yaml
@@ -24,11 +22,17 @@ dbpath = config_content.get('sqlite_file', 'tempsensor.db')
 #carbon_server = config_content.get('carbon_server', 'localhost')
 #carbon_port = int(config_content.get('carbon_port', 2003))
 influx_host = config_content.get('influx_host', 'localhost')
-influx_port = int(config_content.get('influx_port', 8086))
+try:
+    influx_port = int(config_content.get('influx_port', 8086))
+except (TypeError, ValueError):
+    influx_port = 8086
 influx_username = config_content.get('influx_username', 'user')
 influx_db = config_content.get('influx_db', 'databasename')
 influx_db_pw = config_content.get('influx_db_pw', 'databasepw')
-sleep_duration = int(config_content.get('sleep_duration', 6))
+try:
+    sleep_duration = int(config_content.get('sleep_duration', 6))
+except (TypeError, ValueError):
+    sleep_duration = 6
 influx_client = influxdb.InfluxDBClient(host=influx_host, port=influx_port, username=influx_username, database=influx_db, password=influx_db_pw, ssl=False, verify_ssl=False)
 
 conn = sqlite3.connect(dbpath)
@@ -51,6 +55,32 @@ sql = 'create table if not exists sensors (probe text not null, description text
 c = conn.cursor()
 c.execute(sql)
 conn.commit()
+
+def parse_w1_slave(thetext):
+    """Parse DS18B20 w1_slave text. Returns (crcok, temperature_c) or None."""
+    lines = thetext.strip().splitlines()
+    if len(lines) < 2:
+        return None
+
+    crc_line = lines[0]
+    if crc_line.endswith("YES"):
+        crcok = "YES"
+    elif crc_line.endswith("NO"):
+        crcok = "NO"
+    else:
+        return None
+
+    temp_line = lines[1]
+    marker = "t="
+    idx = temp_line.rfind(marker)
+    if idx < 0:
+        return None
+    try:
+        temperaturec = float(temp_line[idx + len(marker):]) / 1000.0
+    except ValueError:
+        return None
+
+    return crcok, temperaturec
 
 # while forever, talk to the sensors
 while 1:
@@ -75,32 +105,27 @@ while 1:
 #        print(sensor)
         # build the full sensor path
         sensor_path = sensor + "/w1_slave"
-    
+
         # open the sensor
         try:
-            tempfile = open(sensor_path)
-        except Exception as e:
+            with open(sensor_path) as tempfile:
+                thetext = tempfile.read()
+        except OSError as e:
             print(sensor_path, e)
             continue
-        # read data into thetext
-        thetext = tempfile.read()
 ## example data
 # b2 01 4b 46 7f ff 0e 10 8c : crc=8c YES
 # b2 01 4b 46 7f ff 0e 10 8c t=27125
 ## end example data
 
-        # close the sensor
-        tempfile.close()
-        # store the time
-        tstamp = datetime.datetime.utcnow()
-        # split the first line (0) by newline, split it by = and space
-        crcok = thetext.split("\n")[0].split("=")[1].split(" ")[1]
-        # on the second line, split by spaces
-        tempdata = thetext.split("\n")[1].split(" ")[9]
-        # extract the temperature
-        temperaturec = float(tempdata[2:])
-        # convert to actual float
-        temperaturec = temperaturec / 1000
+        parsed = parse_w1_slave(thetext)
+        if parsed is None:
+            print(sensor_path, "unparseable sensor data")
+            continue
+        crcok, temperaturec = parsed
+
+        # store the time (UTC epoch seconds)
+        epoch = time.time()
         # convert to F
         temperaturef = (temperaturec * 9)/5 +32
         oid = sensor.replace('/', '.')
@@ -115,7 +140,7 @@ while 1:
 #                  sock.send("%s %6.2f %d \n" % (oid, temperaturec, time.time()))
 #                  print("forming server_data")
 #                  server_data = "%s %6.2f %d \n" % (oid, temperaturef, time.time())
-                  server_data = "%s value=%1.2f %d\n" % (oid, temperaturef, time.time() * 1000000000)
+                  server_data = "%s value=%1.2f %d\n" % (oid, temperaturef, int(epoch * 1000000000))
                   influx_client.write_points(server_data, protocol='line')
 
 #                  print("data sent ok")
@@ -123,15 +148,15 @@ while 1:
                   blurb="Network"
             except Exception as e:
                   print(e)
-                  c.execute("insert into temps values (?,?,?)", (sensor, time.mktime(tstamp.timetuple()), temperaturec))
+                  c.execute("insert into temps values (?,?,?)", (sensor, int(epoch), temperaturec))
                   blurb="Sqlite"
             try:
                   conn.commit()
             except sqlite3.Error as e:
                   print("Error trying to save temp", e)
 
-        print("%s %d %6.2f C %6.2f F Valid/CrcOK=%s %s"% (oid, time.mktime(tstamp.timetuple()), temperaturec, temperaturef, crcok, blurb))
+        print("%s %d %6.2f C %6.2f F Valid/CrcOK=%s %s"% (oid, int(epoch), temperaturec, temperaturef, crcok, blurb))
 
-        # end sensor for
-        time.sleep(sleep_duration)
+    # end sensor for — sleep once per full scan
+    time.sleep(sleep_duration)
 #/sys/bus/w1/devices/28-0000061531b5/w1_slave

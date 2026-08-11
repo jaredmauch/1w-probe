@@ -14,7 +14,7 @@ import uuid
 import yaml
 import spidev
 
-class MCP3208:
+class MCP3204:
     def __init__(self, spi_channel=0):
         self.spi_channel = spi_channel
         self.conn = spidev.SpiDev(0, spi_channel)
@@ -22,16 +22,16 @@ class MCP3208:
         self.conn.max_speed_hz = 50000 # 0.05MHz
 
     def __del__(self):
-        self.close
+        self.close()
 
     def close(self):
         if self.conn is not None:
-            self.conn.close
+            self.conn.close()
             self.conn = None
 
     def read(self, ch):
-        if 7 <= ch <= 0:
-            raise Exception('MCP3208 channel must be 0-7: ' + str(ch))
+        if not (0 <= ch <= 3):
+            raise Exception('MCP3204 channel must be 0-3: ' + str(ch))
 
         cmd = 128  # 1000 0000
         cmd += 64  # 1100 0000
@@ -51,6 +51,7 @@ if __name__ == '__main__':
     vref = 3.3 # vref voltage
     adc_bits = 12
     bits = (2**adc_bits) # 4096 - mcp3204 is 12-bit ADC
+    samples = 12
 
     divider = resistor_1 / (resistor_1 + resistor_2)
 
@@ -64,12 +65,16 @@ if __name__ == '__main__':
 
     # server hostname
     carbon_server = config_content.get('carbon_server', 'localhost')
-    carbon_port = int(config_content.get('carbon_port', 2003))
-    sleep_duration = float(config_content.get('sleep_duration', 1))
+    try:
+        carbon_port = int(config_content.get('carbon_port', 2003))
+    except (TypeError, ValueError):
+        carbon_port = 2003
+    try:
+        sleep_duration = float(config_content.get('sleep_duration', 1))
+    except (TypeError, ValueError):
+        sleep_duration = 1.0
 
-    vmult = vref/bits
-
-    spi = MCP3208(0)
+    spi = MCP3204(0)
 
     count = 0
     a0 = 0
@@ -85,12 +90,12 @@ if __name__ == '__main__':
         a3 += spi.read(3)
 
 
-        if count == adc_bits:
-#            print("ch0=%04d, ch1=%04d, ch2=%04d, ch3=%04d" % (a0/adc_bits, a1/adc_bits, a2/adc_bits, a3/adc_bits))
-            vbits0 = ((a0/adc_bits) / bits)
-            vbits1 = ((a1/adc_bits) / bits)
-            vbits2 = ((a2/adc_bits) / bits)
-            vbits3 = ((a3/adc_bits) / bits)
+        if count == samples:
+#            print("ch0=%04d, ch1=%04d, ch2=%04d, ch3=%04d" % (a0/samples, a1/samples, a2/samples, a3/samples))
+            vbits0 = ((a0/samples) / bits)
+            vbits1 = ((a1/samples) / bits)
+            vbits2 = ((a2/samples) / bits)
+            vbits3 = ((a3/samples) / bits)
 
             vout0 = (vbits0 * vref) / divider
             vout1 = (vbits1 * vref) / divider
@@ -99,34 +104,38 @@ if __name__ == '__main__':
 
             print("%x VIN0=%04.2f, VIN1=%04.2f, VIN2=%04.2f, VIN3=%04.2f" % (hostname, vout0, vout1, vout2, vout3))
 
+            sock = None
             try:
                 sock = socket.socket()
+                sock.settimeout(5)
                 sock.connect((carbon_server, carbon_port))
                 base_oid = "sys.bus.spi.%x." % hostname
+                now = time.time()
 
                 oid0 = base_oid + 'vin0'
                 oid1 = base_oid + 'vin1'
                 oid2 = base_oid + 'vin2'
                 oid3 = base_oid + 'vin3'
 
-                server_data0 = "%s %6.2f %d \n" % (oid0, vout0, time.time())
-                server_data1 = "%s %6.2f %d \n" % (oid1, vout1, time.time())
-                server_data2 = "%s %6.2f %d \n" % (oid2, vout2, time.time())
-                server_data3 = "%s %6.2f %d \n" % (oid3, vout3, time.time())
+                server_data0 = "%s %6.2f %d \n" % (oid0, vout0, now)
+                server_data1 = "%s %6.2f %d \n" % (oid1, vout1, now)
+                server_data2 = "%s %6.2f %d \n" % (oid2, vout2, now)
+                server_data3 = "%s %6.2f %d \n" % (oid3, vout3, now)
 
     #            print(server_data0)
     #            print(server_data1)
     #            print(server_data2)
     #            print(server_data3)
 
-                sock.send(server_data0.encode())
-                sock.send(server_data1.encode())
-                sock.send(server_data2.encode())
-                sock.send(server_data3.encode())
-
-                sock.close()
+                sock.sendall(server_data0.encode())
+                sock.sendall(server_data1.encode())
+                sock.sendall(server_data2.encode())
+                sock.sendall(server_data3.encode())
             except Exception as e:
                 print(e)
+            finally:
+                if sock is not None:
+                    sock.close()
 
             count = 0
             a0 = 0
